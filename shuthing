@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>はすたのドットシューティング</title>
+  <style>
+    body {
+      margin: 0;
+      background: #0b1e2d;
+      overflow: hidden;
+      font-family: monospace;
+      color: #cfe9ff;
+      text-align: center;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      background: #06131d;
+      image-rendering: pixelated; /* ドット感 */
+      border: 3px solid #3aa7ff;
+      border-radius: 8px;
+    }
+    #ui {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 16px;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div id="ui">SCORE: <span id="score">0</span></div>
+  <canvas id="game" width="200" height="300"></canvas>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+
+    // 拡大表示（ドットを大きく見せる）
+    const scale = 3;
+    canvas.style.width = canvas.width * scale + 'px';
+    canvas.style.height = canvas.height * scale + 'px';
+
+    let player = { x: 100, y: 260 };
+    let bullets = [];
+    let enemies = [];
+    let score = 0;
+    let gameOver = false;
+    let keys = {};
+
+    document.addEventListener("keydown", e => keys[e.key] = true);
+    document.addEventListener("keyup", e => keys[e.key] = false);
+
+    function spawnEnemy() {
+      enemies.push({ x: Math.random() * 180, y: 0, speed: 1 + Math.random() });
+    }
+
+    function update() {
+      if (gameOver) return;
+
+      // 移動
+      if (keys["ArrowLeft"]) player.x -= 3;
+      if (keys["ArrowRight"]) player.x += 3;
+
+      // 弾
+      if (keys[" "]) {
+        if (Math.random() < 0.2) {
+          bullets.push({ x: player.x + 4, y: player.y });
+        }
+      }
+
+      bullets.forEach(b => b.y -= 4);
+      enemies.forEach(e => e.y += e.speed);
+
+      // 衝突
+      bullets.forEach((b, bi) => {
+        enemies.forEach((e, ei) => {
+          if (Math.abs(b.x - e.x) < 8 && Math.abs(b.y - e.y) < 8) {
+            bullets.splice(bi, 1);
+            enemies.splice(ei, 1);
+            score++;
+            document.getElementById("score").textContent = score;
+          }
+        });
+      });
+
+      enemies.forEach(e => {
+        if (Math.abs(player.x - e.x) < 8 && Math.abs(player.y - e.y) < 8) {
+          gameOver = true;
+        }
+      });
+
+      bullets = bullets.filter(b => b.y > 0);
+      enemies = enemies.filter(e => e.y < 300);
+    }
+
+    // ドット絵描画
+    function drawPixel(x, y, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, 2, 2);
+    }
+
+    function drawPlayer(x, y) {
+      const shape = [
+        " 11 ",
+        "1111",
+        "1111",
+        " 11 "
+      ];
+      shape.forEach((row, dy) => {
+        [...row].forEach((c, dx) => {
+          if (c === "1") drawPixel(x + dx * 2, y + dy * 2, "#7FDBFF");
+        });
+      });
+    }
+
+    function drawEnemy(x, y) {
+      const shape = [
+        "11",
+        "11"
+      ];
+      shape.forEach((row, dy) => {
+        [...row].forEach((c, dx) => {
+          if (c === "1") drawPixel(x + dx * 2, y + dy * 2, "#FF4136");
+        });
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawPlayer(player.x, player.y);
+
+      bullets.forEach(b => {
+        drawPixel(b.x, b.y, "#FFFFFF");
+      });
+
+      enemies.forEach(e => drawEnemy(e.x, e.y));
+
+      if (gameOver) {
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "10px monospace";
+        ctx.fillText("GAME OVER", 60, 150);
+      }
+    }
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    setInterval(spawnEnemy, 800);
+    loop();
+  </script>
+</body>
+</html>
